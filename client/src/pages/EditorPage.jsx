@@ -1,9 +1,24 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import Client from "../components/Client";
 import Editor from "../components/Editor";
 import { FaCode } from "react-icons/fa6";
+import { initSocket } from "../socket/socket";
+import { ACTIONS } from "../actions";
+import {useLocation} from "react-router-dom";
 
 const EditorPage = () => {
+  const location = useLocation();
+  const socketRef = useRef(null);
+  useEffect(() => {
+    const init = async () => {
+      socketRef.current = await initSocket();
+      socketRef.current.emit(ACTIONS.JOIN, {
+        roomId,
+        username:location.state?.username,
+      })
+    };
+    init();
+  }, []);
   const clients = [
     { socketId: 1, username: "John" },
     { socketId: 2, username: "Avinash" },
