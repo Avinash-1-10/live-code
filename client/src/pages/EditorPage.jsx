@@ -1,28 +1,57 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
 import Client from "../components/Client";
 import Editor from "../components/Editor";
 import { FaCode } from "react-icons/fa6";
 import { initSocket } from "../socket/socket";
-import { ACTIONS } from "../actions";
-import {useLocation} from "react-router-dom";
+import { ACTIONS } from "../actions.js";
+import {
+  Navigate,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 
 const EditorPage = () => {
   const location = useLocation();
   const socketRef = useRef(null);
+  const navigate = useNavigate();
+  const { roomId } = useParams();
+  const [clients, setClients] = useState([]);
+
+  const handleErrors = (err) => {
+    console.log(err);
+    toast.error("Socket connection failed, try again later!");
+    // socketRef.current.close();
+    navigate("/");
+  };
   useEffect(() => {
     const init = async () => {
       socketRef.current = await initSocket();
+      socketRef.current.on("connect_error", (err) => handleErrors(err));
+      socketRef.current.on("connect_failed", (err) => handleErrors(err));
       socketRef.current.emit(ACTIONS.JOIN, {
         roomId,
-        username:location.state?.username,
-      })
+        username: location.state?.username,
+      });
+      socketRef.current.on(
+        ACTIONS.JOINED,
+        ({ clients, username, socketId }) => {
+          if (username !== location.state?.username) {
+            toast.success(`${username} has joined the room.`);
+            console.log(`${username} has joined the room.`);
+          }
+          setClients(clients);
+        }
+      );
     };
     init();
   }, []);
-  const clients = [
-    { socketId: 1, username: "John" },
-    { socketId: 2, username: "Avinash" },
-  ];
+
+  if (!location.state) {
+    return <Navigate to={"/"} />;
+  }
+
   return (
     <div className="flex min-h-screen">
       <div className="w-1/5 bg-gray-800 text-white flex flex-col box-border border-r-2 border-r-blue-800">
@@ -56,6 +85,7 @@ const EditorPage = () => {
           }}
         />
       </div>
+      <Toaster />
     </div>
   );
 };
